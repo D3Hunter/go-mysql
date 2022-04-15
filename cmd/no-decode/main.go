@@ -49,10 +49,10 @@ func main() {
 	defer syncer.Close()
 	var err error
 	if gtidMode {
-		_, err = syncer.StartSync(mysql.Position{Pos: 4})
-	} else {
 		set, _ := mysql.ParseMysqlGTIDSet("")
 		_, err = syncer.StartSyncGTID(set)
+	} else {
+		_, err = syncer.StartSync(mysql.Position{Pos: 4})
 	}
 	if err != nil {
 		panic(err)

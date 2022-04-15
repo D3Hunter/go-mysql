@@ -827,10 +827,6 @@ func (b *BinlogSyncer) parseEvent(s *BinlogStreamer, data []byte) error {
 	}
 
 	needStop := false
-	select {
-	case <-b.ctx.Done():
-		needStop = true
-	}
 
 	if needACK {
 		err := b.replySemiSyncACK(b.nextPos)
