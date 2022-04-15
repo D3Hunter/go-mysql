@@ -150,7 +150,7 @@ func NewBinlogSyncer(cfg BinlogSyncerConfig) *BinlogSyncer {
 	// Clear the Password to avoid outputing it in log.
 	pass := cfg.Password
 	cfg.Password = ""
-	log.Infof("create BinlogSyncer with config %v", cfg)
+	//log.Infof("create BinlogSyncer with config %v", cfg)
 	cfg.Password = pass
 
 	b := new(BinlogSyncer)
@@ -382,7 +382,7 @@ func (b *BinlogSyncer) GetNextPosition() Position {
 
 // StartSync starts syncing from the `pos` position.
 func (b *BinlogSyncer) StartSync(pos Position) (*BinlogStreamer, error) {
-	log.Infof("begin to sync binlog from position %s", pos)
+	//log.Infof("begin to sync binlog from position %s", pos)
 
 	b.m.Lock()
 	defer b.m.Unlock()

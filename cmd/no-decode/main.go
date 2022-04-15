@@ -18,8 +18,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/siddontang/go-log/log"
-
 	"github.com/go-mysql-org/go-mysql/mysql"
 	"github.com/go-mysql-org/go-mysql/replication"
 )
@@ -44,7 +42,6 @@ func main() {
 
 	cfg.DumpCommandFlag = replication.BINLOG_SEND_ANNOTATE_ROWS_EVENT
 
-	log.Info("starting")
 	syncer := replication.NewBinlogSyncer(cfg)
 	defer syncer.Close()
 	var err error
