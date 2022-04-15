@@ -27,6 +27,7 @@ func main() {
 	parseEvent := os.Args[2] == "parse-event"
 	rawMode := os.Args[3] == "raw"
 	gtidMode := os.Args[4] == "gtid"
+	checksum := os.Args[5] == "checksum"
 	// Create a binlog syncer with a unique server id, the server id must be different from other MySQL's.
 	// flavor is mysql or mariadb
 	cfg := replication.BinlogSyncerConfig{
@@ -38,6 +39,7 @@ func main() {
 		Password:       "123456",
 		RawModeEnabled: rawMode,
 		ParseEvent:     parseEvent,
+		VerifyChecksum: checksum,
 	}
 
 	cfg.DumpCommandFlag = replication.BINLOG_SEND_ANNOTATE_ROWS_EVENT
