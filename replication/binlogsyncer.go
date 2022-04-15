@@ -13,7 +13,6 @@ import (
 	"github.com/pingcap/errors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/siddontang/go-log/log"
-	"go.uber.org/atomic"
 
 	"github.com/go-mysql-org/go-mysql/client"
 	. "github.com/go-mysql-org/go-mysql/mysql"
@@ -109,8 +108,7 @@ type BinlogSyncerConfig struct {
 
 	//Option function is used to set outside of BinlogSyncerConfig， between mysql connection and COM_REGISTER_SLAVE
 	//For MariaDB: slave_gtid_ignore_duplicates、skip_replication、slave_until_gtid
-	Option     func(*client.Conn) error
-	ParseEvent bool
+	Option func(*client.Conn) error
 }
 
 // BinlogSyncer syncs binlog event from server.
@@ -137,8 +135,6 @@ type BinlogSyncer struct {
 	lastConnectionID uint32
 
 	retryCount int
-
-	BytesRead atomic.Int64
 }
 
 // NewBinlogSyncer creates the BinlogSyncer with cfg.
@@ -730,12 +726,9 @@ func (b *BinlogSyncer) onStream(s *BinlogStreamer) {
 
 		switch data[0] {
 		case OK_HEADER:
-			b.BytesRead.Add(int64(len(data) - 1)) // skip packet header
-			if b.cfg.ParseEvent {
-				if err = b.parseEvent(s, data); err != nil {
-					s.closeWithError(err)
-					return
-				}
+			if err = b.parseEvent(s, data); err != nil {
+				s.closeWithError(err)
+				return
 			}
 		case ERR_HEADER:
 			err = b.c.HandleErrorPacket(data)
@@ -827,6 +820,11 @@ func (b *BinlogSyncer) parseEvent(s *BinlogStreamer, data []byte) error {
 	}
 
 	needStop := false
+	select {
+	case s.ch <- e:
+	case <-b.ctx.Done():
+		needStop = true
+	}
 
 	if needACK {
 		err := b.replySemiSyncACK(b.nextPos)

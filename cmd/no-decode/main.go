@@ -14,9 +14,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
+
+	"go.uber.org/atomic"
 
 	"github.com/go-mysql-org/go-mysql/mysql"
 	"github.com/go-mysql-org/go-mysql/replication"
@@ -24,9 +27,8 @@ import (
 
 func main() {
 	host := os.Args[1]
-	parseEvent := os.Args[2] == "parse-event"
-	rawMode := os.Args[3] == "raw"
-	gtidMode := os.Args[4] == "gtid"
+	rawMode := os.Args[2] == "raw"
+	gtidMode := os.Args[3] == "gtid"
 	// Create a binlog syncer with a unique server id, the server id must be different from other MySQL's.
 	// flavor is mysql or mariadb
 	cfg := replication.BinlogSyncerConfig{
@@ -37,39 +39,48 @@ func main() {
 		User:           "root",
 		Password:       "123456",
 		RawModeEnabled: rawMode,
-		ParseEvent:     parseEvent,
+		VerifyChecksum: true,
 	}
 
 	cfg.DumpCommandFlag = replication.BINLOG_SEND_ANNOTATE_ROWS_EVENT
 
 	syncer := replication.NewBinlogSyncer(cfg)
 	defer syncer.Close()
+	var streamer *replication.BinlogStreamer
 	var err error
 	if gtidMode {
 		set, _ := mysql.ParseMysqlGTIDSet("")
-		_, err = syncer.StartSyncGTID(set)
+		streamer, err = syncer.StartSyncGTID(set)
 	} else {
-		_, err = syncer.StartSync(mysql.Position{Pos: 4})
+		streamer, err = syncer.StartSync(mysql.Position{Pos: 4})
 	}
 	if err != nil {
 		panic(err)
 	}
 
-	start := time.Now()
-	lastTime := start
-	lastBytes := syncer.BytesRead.Load()
-	ticker := time.NewTicker(1 * time.Second)
-	for {
-		select {
-		case <-ticker.C:
-			currTime := time.Now()
-			currBytes := syncer.BytesRead.Load()
-			fmt.Printf("%v: %.2f MB/s\n",
-				//float64(currBytes)/1024.0/1024.0/currTime.Sub(start).Seconds(),
-				currTime.Format("2006-01-02 15:04:05"),
-				float64(currBytes-lastBytes)/1024.0/1024.0/currTime.Sub(lastTime).Seconds())
-			lastBytes = currBytes
-			lastTime = currTime
+	var bytesRead atomic.Int64
+	go func() {
+		start := time.Now()
+		lastTime := start
+		lastBytes := bytesRead.Load()
+		ticker := time.NewTicker(1 * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				currTime := time.Now()
+				currBytes := bytesRead.Load()
+				fmt.Printf("%v: %.2f MB/s\n",
+					//float64(currBytes)/1024.0/1024.0/currTime.Sub(start).Seconds(),
+					currTime.Format("2006-01-02 15:04:05"),
+					float64(currBytes-lastBytes)/1024.0/1024.0/currTime.Sub(lastTime).Seconds())
+				lastBytes = currBytes
+				lastTime = currTime
+			}
 		}
+	}()
+
+	for {
+		e, _ := streamer.GetEvent(context.Background())
+		bytesRead.Add(int64(len(e.RawData)))
 	}
 }
