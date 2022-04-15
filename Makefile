@@ -8,6 +8,8 @@ build:
 	go build -o bin/go-canal cmd/go-canal/main.go
 	go build -o bin/go-binlogparser cmd/go-binlogparser/main.go
 
+no-decode:
+	go build -o bin/no-decode cmd/no-decode/main.go
 test:
 	go test --race -timeout 2m ./...
 

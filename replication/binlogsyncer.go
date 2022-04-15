@@ -13,6 +13,7 @@ import (
 	"github.com/pingcap/errors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/siddontang/go-log/log"
+	"go.uber.org/atomic"
 
 	"github.com/go-mysql-org/go-mysql/client"
 	. "github.com/go-mysql-org/go-mysql/mysql"
@@ -135,6 +136,8 @@ type BinlogSyncer struct {
 	lastConnectionID uint32
 
 	retryCount int
+
+	BytesRead atomic.Int64
 }
 
 // NewBinlogSyncer creates the BinlogSyncer with cfg.
@@ -726,10 +729,7 @@ func (b *BinlogSyncer) onStream(s *BinlogStreamer) {
 
 		switch data[0] {
 		case OK_HEADER:
-			if err = b.parseEvent(s, data); err != nil {
-				s.closeWithError(err)
-				return
-			}
+			b.BytesRead.Add(int64(len(data) - 1)) // skip packet header
 		case ERR_HEADER:
 			err = b.c.HandleErrorPacket(data)
 			s.closeWithError(err)
