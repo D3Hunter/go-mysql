@@ -25,6 +25,7 @@ import (
 
 func main() {
 	host := os.Args[1]
+	parseEvent := os.Args[1] == "true"
 	// Create a binlog syncer with a unique server id, the server id must be different from other MySQL's.
 	// flavor is mysql or mariadb
 	cfg := replication.BinlogSyncerConfig{
@@ -35,6 +36,7 @@ func main() {
 		User:           "root",
 		Password:       "123456",
 		RawModeEnabled: true,
+		ParseEvent:     parseEvent,
 	}
 
 	cfg.DumpCommandFlag = replication.BINLOG_SEND_ANNOTATE_ROWS_EVENT
@@ -48,12 +50,19 @@ func main() {
 	}
 
 	start := time.Now()
-	ticker := time.NewTicker(5 * time.Second)
+	lastTime := start
+	lastBytes := syncer.BytesRead.Load()
+	ticker := time.NewTicker(1 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
-			d := time.Since(start)
-			log.Infof("download speed: %.2f MB/s", float64(syncer.BytesRead.Load())/1024.0/1024.0/d.Seconds())
+			currTime := time.Now()
+			currBytes := syncer.BytesRead.Load()
+			log.Infof("download speed: total=%.2f MB/s, curr=%.2f MB/s",
+				float64(currBytes)/1024.0/1024.0/currTime.Sub(start).Seconds(),
+				float64(currBytes-lastBytes)/1024.0/1024.0/currTime.Sub(lastTime).Seconds())
+			lastBytes = currBytes
+			lastTime = currTime
 		}
 	}
 }

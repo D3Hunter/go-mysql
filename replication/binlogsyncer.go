@@ -109,7 +109,8 @@ type BinlogSyncerConfig struct {
 
 	//Option function is used to set outside of BinlogSyncerConfig， between mysql connection and COM_REGISTER_SLAVE
 	//For MariaDB: slave_gtid_ignore_duplicates、skip_replication、slave_until_gtid
-	Option func(*client.Conn) error
+	Option     func(*client.Conn) error
+	ParseEvent bool
 }
 
 // BinlogSyncer syncs binlog event from server.
@@ -729,6 +730,12 @@ func (b *BinlogSyncer) onStream(s *BinlogStreamer) {
 
 		switch data[0] {
 		case OK_HEADER:
+			if b.cfg.ParseEvent {
+				if err = b.parseEvent(s, data); err != nil {
+					s.closeWithError(err)
+					return
+				}
+			}
 			b.BytesRead.Add(int64(len(data) - 1)) // skip packet header
 		case ERR_HEADER:
 			err = b.c.HandleErrorPacket(data)
