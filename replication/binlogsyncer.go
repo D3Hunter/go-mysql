@@ -730,13 +730,13 @@ func (b *BinlogSyncer) onStream(s *BinlogStreamer) {
 
 		switch data[0] {
 		case OK_HEADER:
+			b.BytesRead.Add(int64(len(data) - 1)) // skip packet header
 			if b.cfg.ParseEvent {
 				if err = b.parseEvent(s, data); err != nil {
 					s.closeWithError(err)
 					return
 				}
 			}
-			b.BytesRead.Add(int64(len(data) - 1)) // skip packet header
 		case ERR_HEADER:
 			err = b.c.HandleErrorPacket(data)
 			s.closeWithError(err)

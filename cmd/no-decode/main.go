@@ -25,7 +25,8 @@ import (
 
 func main() {
 	host := os.Args[1]
-	parseEvent := os.Args[1] == "true"
+	parseEvent := os.Args[2] == "true"
+	rawMode := os.Args[3] == "true"
 	// Create a binlog syncer with a unique server id, the server id must be different from other MySQL's.
 	// flavor is mysql or mariadb
 	cfg := replication.BinlogSyncerConfig{
@@ -35,7 +36,7 @@ func main() {
 		Port:           3306,
 		User:           "root",
 		Password:       "123456",
-		RawModeEnabled: true,
+		RawModeEnabled: rawMode,
 		ParseEvent:     parseEvent,
 	}
 
