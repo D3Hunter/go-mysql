@@ -69,7 +69,7 @@ func main() {
 			currBytes := syncer.BytesRead.Load()
 			fmt.Printf("%v: %.2f MB/s\n",
 				//float64(currBytes)/1024.0/1024.0/currTime.Sub(start).Seconds(),
-				currTime,
+				currTime.Format("2006-01-02 15:04:05"),
 				float64(currBytes-lastBytes)/1024.0/1024.0/currTime.Sub(lastTime).Seconds())
 			lastBytes = currBytes
 			lastTime = currTime
