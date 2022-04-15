@@ -14,6 +14,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -25,8 +26,9 @@ import (
 
 func main() {
 	host := os.Args[1]
-	parseEvent := os.Args[2] == "true"
-	rawMode := os.Args[3] == "true"
+	parseEvent := os.Args[2] == "parse-event"
+	rawMode := os.Args[3] == "raw"
+	gtidMode := os.Args[4] == "gtid"
 	// Create a binlog syncer with a unique server id, the server id must be different from other MySQL's.
 	// flavor is mysql or mariadb
 	cfg := replication.BinlogSyncerConfig{
@@ -45,7 +47,13 @@ func main() {
 	log.Info("starting")
 	syncer := replication.NewBinlogSyncer(cfg)
 	defer syncer.Close()
-	_, err := syncer.StartSync(mysql.Position{Pos: 4})
+	var err error
+	if gtidMode {
+		_, err = syncer.StartSync(mysql.Position{Pos: 4})
+	} else {
+		set, _ := mysql.ParseMysqlGTIDSet("")
+		_, err = syncer.StartSyncGTID(set)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -59,8 +67,9 @@ func main() {
 		case <-ticker.C:
 			currTime := time.Now()
 			currBytes := syncer.BytesRead.Load()
-			log.Infof("download speed: total=%.2f MB/s, curr=%.2f MB/s",
-				float64(currBytes)/1024.0/1024.0/currTime.Sub(start).Seconds(),
+			fmt.Printf("%v: %.2f MB/s\n",
+				//float64(currBytes)/1024.0/1024.0/currTime.Sub(start).Seconds(),
+				currTime,
 				float64(currBytes-lastBytes)/1024.0/1024.0/currTime.Sub(lastTime).Seconds())
 			lastBytes = currBytes
 			lastTime = currTime
