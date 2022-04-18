@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"go.uber.org/atomic"
@@ -29,6 +30,7 @@ func main() {
 	host := os.Args[1]
 	rawMode := os.Args[2] == "raw"
 	gtidMode := os.Args[3] == "gtid"
+	chSize, _ := strconv.Atoi(os.Args[4])
 	// Create a binlog syncer with a unique server id, the server id must be different from other MySQL's.
 	// flavor is mysql or mariadb
 	cfg := replication.BinlogSyncerConfig{
@@ -79,8 +81,24 @@ func main() {
 		}
 	}()
 
+	chs := make([]chan *replication.BinlogEvent, chSize)
+	for i := 0; i < chSize; i++ {
+		chs[i] = make(chan *replication.BinlogEvent, 1024)
+	}
+	for i := 0; i < chSize-1; i++ {
+		go func(i int) {
+			for e := range chs[i] {
+				chs[i+1] <- e
+			}
+		}(i)
+	}
+	go func() {
+		for e := range chs[chSize-1] {
+			bytesRead.Add(int64(len(e.RawData)))
+		}
+	}()
 	for {
 		e, _ := streamer.GetEvent(context.Background())
-		bytesRead.Add(int64(len(e.RawData)))
+		chs[0] <- e
 	}
 }
