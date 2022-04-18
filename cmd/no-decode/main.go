@@ -81,6 +81,8 @@ func main() {
 		}
 	}()
 
+	// just make sure there are 2 branches like binlogsyncer
+	ctx := context.Background()
 	chs := make([]chan *replication.BinlogEvent, chSize)
 	for i := 0; i < chSize; i++ {
 		chs[i] = make(chan *replication.BinlogEvent, 1024)
@@ -88,7 +90,10 @@ func main() {
 	for i := 0; i < chSize-1; i++ {
 		go func(i int) {
 			for e := range chs[i] {
-				chs[i+1] <- e
+				select {
+				case chs[i+1] <- e:
+				case <-ctx.Done():
+				}
 			}
 		}(i)
 	}
@@ -99,6 +104,9 @@ func main() {
 	}()
 	for {
 		e, _ := streamer.GetEvent(context.Background())
-		chs[0] <- e
+		select {
+		case chs[0] <- e:
+		case <-ctx.Done():
+		}
 	}
 }
