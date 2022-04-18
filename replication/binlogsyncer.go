@@ -109,6 +109,8 @@ type BinlogSyncerConfig struct {
 	//Option function is used to set outside of BinlogSyncerConfig， between mysql connection and COM_REGISTER_SLAVE
 	//For MariaDB: slave_gtid_ignore_duplicates、skip_replication、slave_until_gtid
 	Option func(*client.Conn) error
+
+	ChannelSize int
 }
 
 // BinlogSyncer syncs binlog event from server.
@@ -364,7 +366,7 @@ func (b *BinlogSyncer) prepare() error {
 func (b *BinlogSyncer) startDumpStream() *BinlogStreamer {
 	b.running = true
 
-	s := newBinlogStreamer()
+	s := newBinlogStreamer(b.cfg.ChannelSize)
 
 	b.wg.Add(1)
 	go b.onStream(s)

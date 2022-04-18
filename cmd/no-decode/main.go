@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"go.uber.org/atomic"
@@ -29,6 +30,7 @@ func main() {
 	host := os.Args[1]
 	rawMode := os.Args[2] == "raw"
 	gtidMode := os.Args[3] == "gtid"
+	channelSize, _ := strconv.Atoi(os.Args[4])
 	// Create a binlog syncer with a unique server id, the server id must be different from other MySQL's.
 	// flavor is mysql or mariadb
 	cfg := replication.BinlogSyncerConfig{
@@ -40,6 +42,7 @@ func main() {
 		Password:       "123456",
 		RawModeEnabled: rawMode,
 		VerifyChecksum: true,
+		ChannelSize:    channelSize,
 	}
 
 	cfg.DumpCommandFlag = replication.BINLOG_SEND_ANNOTATE_ROWS_EVENT
