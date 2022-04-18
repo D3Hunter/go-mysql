@@ -82,7 +82,7 @@ func main() {
 	}()
 
 	// just make sure there are 2 branches like binlogsyncer
-	ctx := context.Background()
+	ctx, _ := context.WithCancel(context.Background())
 	chs := make([]chan *replication.BinlogEvent, chSize)
 	for i := 0; i < chSize; i++ {
 		chs[i] = make(chan *replication.BinlogEvent, 1024)
